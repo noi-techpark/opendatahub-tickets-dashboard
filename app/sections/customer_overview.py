@@ -30,6 +30,9 @@ config = load_config()
 
 st.title("Customer Overview")
 
+# Text of this Page
+st.markdown(config['customers_overview']['markdown_text']['additional_info'])
+
 current_year = datetime.datetime.now().year
 selected_years = st.multiselect(
     "Select Years", 

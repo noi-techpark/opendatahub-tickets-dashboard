@@ -3,6 +3,17 @@ import os
 from dotenv import load_dotenv
 from utils import login_request, logout_request
 
+import plotly.io as pio
+
+# color scheme
+BLACK_WHITE_GRAY_SCHEME = ['#000000', '#555555', '#808080', '#A9A9A9', '#D3D3D3', '#FFFFFF']
+
+# Set the custom Plotly template globally
+pio.templates["black_white_gray_template"] = pio.templates["plotly"]
+pio.templates["black_white_gray_template"]['layout']['colorway'] = BLACK_WHITE_GRAY_SCHEME
+pio.templates.default = "black_white_gray_template"
+
+
 def login():
     st.title("Login")
     
@@ -57,19 +68,18 @@ def main():
     login_page = st.Page(login, title="Log in", icon="🔒")
     logout_page = st.Page(logout, title="Log out", icon="🔓")
 
-    customer = st.Page("sections/customer_overview.py", title="Customer Overview", icon="", default=True)
-    queue = st.Page("sections/help_overview.py", title="Help Queue Overview", icon="")
-    # alerts = st.Page("reports/alerts.py", title="System alerts", icon="🚨")
-
-    # search = st.Page("tools/search.py", title="Search", icon="🔍")
-    # history = st.Page("tools/history.py", title="History", icon="📜")
+    queue = st.Page("sections/help_overview.py", title="Help Queue Overview", icon="", default=True)
+    customer = st.Page("sections/customer_overview.py", title="Customer Overview", icon="")
+    time = st.Page("sections/response_time.py", title="Response Times", icon="")
+    domain = st.Page("sections/domains.py", title="Domains", icon="")
+    idm = st.Page("sections/idm_tickets.py", title="IDM Tickets", icon="")
+    requestors = st.Page("sections/requestors.py", title="Requestors", icon="")
 
     if st.session_state.logged_in:
         pg = st.navigation(
             {
                 "Account": [logout_page],
-                "Reports": [customer, queue]#, bugs, alerts],
-                # "Tools": [search, history],
+                "Reports": [queue, domain, idm, time, requestors, customer]
             }
         )
     else:
