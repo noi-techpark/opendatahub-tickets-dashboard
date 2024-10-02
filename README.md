@@ -1,7 +1,5 @@
 # opendatahub-tickets-dashboard
 
-Here’s the corrected version of your Quick-Start instructions:
-
 ## Quick-Start
 1. **Clone this repository:**
    ```bash
