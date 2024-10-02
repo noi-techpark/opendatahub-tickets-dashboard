@@ -1,0 +1,21 @@
+customers_overview:
+  query_parameters:
+    query: "<QUERY_STRING>"
+    fields: "<FIELDS>"
+
+  markdown_text:
+    additional_info: |
+      ___
+      **Insert any custom information here**.
+      ___
+
+help_overview:
+  query_parameters:
+    query: "<QUERY_STRING>"
+    fields: "<FIELDS>"
+
+  markdown_text:
+    additional_info: |
+      ___
+      **Insert any custom information here**.
+      ___
