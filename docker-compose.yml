@@ -1,0 +1,16 @@
+version: '3'
+
+services:
+  streamlit:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile
+    volumes:
+      - .:/app
+    ports:
+      - "8501:8501"
+    environment:
+      - PYTHONPATH=app
+    working_dir: /app
+    env_file: app/.env
+    restart: unless-stopped
