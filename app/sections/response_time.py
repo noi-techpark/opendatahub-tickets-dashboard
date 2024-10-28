@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import yaml
 import datetime
 from utils import fetch_data
 
@@ -10,11 +9,6 @@ RESPONSE_CATEGORIES = ["Within first hour", "Within first day", "Within first 2 
 DATE_FORMAT = '%a %b %d %H:%M:%S %Y'
 HOURS_IN_A_DAY = 24
 HOURS_IN_A_WEEK = 7 * HOURS_IN_A_DAY
-
-# Load configuration from the config.yaml file
-def load_config(config_file="config.yaml"):
-    with open(config_file, 'r') as file:
-        return yaml.safe_load(file)
 
 # Data processing function to calculate response time categories
 def categorize_response_times(df, started_field="Started", created_field="Created"):
@@ -110,7 +104,7 @@ def prepare_stacked_data(all_data):
 
 
 # Load configuration
-config = load_config()
+config = st.session_state.config
 
 st.title("Response Times")
 

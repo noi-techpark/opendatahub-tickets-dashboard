@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import yaml
 import datetime
 import plotly.express as px
 from utils import fetch_data
@@ -9,10 +8,6 @@ from utils import fetch_data
 DEFAULT_START_YEAR = 2019
 DATE_FORMAT = '%a %b %d %H:%M:%S %Y'
 
-# Load configuration from the config.yaml file
-def load_config(config_file="config.yaml"):
-    with open(config_file, 'r') as file:
-        return yaml.safe_load(file)
 
 # Function to standardize domain field by sorting its components
 def standardize_domain(domain):
@@ -73,7 +68,7 @@ def create_yearly_percentage_chart(domain_counts, year, max_percentage):
     return fig
 
 # Load configuration
-config = load_config()
+config = st.session_state.config
 
 # Streamlit UI
 st.title("Domains Overview")

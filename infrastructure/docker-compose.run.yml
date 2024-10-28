@@ -1,0 +1,8 @@
+services:
+  app:
+    image: ${DOCKER_IMAGE}:${DOCKER_TAG}
+    restart: unless-stopped
+    env_file: 
+      - app/.env
+    ports:
+      - "${SERVER_PORT}:8501"

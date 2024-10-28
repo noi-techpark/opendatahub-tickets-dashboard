@@ -1,9 +1,24 @@
 import streamlit as st
+import yaml
 import os
 from dotenv import load_dotenv
 from utils import login_request, logout_request
-
 import plotly.io as pio
+
+def load_config():
+    # Determine the absolute path to config.yaml based on the current file's directory
+    config_path = os.path.join(os.path.dirname(__file__), 'config.yaml')
+    config = {}
+
+    try:
+        with open(config_path, 'r') as file:
+            config = yaml.safe_load(file)
+    except FileNotFoundError:
+        st.error(f"Configuration file not found at {config_path}.")
+    except yaml.YAMLError:
+        st.error("Error reading configuration file.")
+    
+    return config
 
 # color scheme
 BLACK_WHITE_GRAY_SCHEME = ['#000000', '#555555', '#808080', '#A9A9A9', '#D3D3D3', '#FFFFFF']
@@ -12,7 +27,6 @@ BLACK_WHITE_GRAY_SCHEME = ['#000000', '#555555', '#808080', '#A9A9A9', '#D3D3D3'
 pio.templates["black_white_gray_template"] = pio.templates["plotly"]
 pio.templates["black_white_gray_template"]['layout']['colorway'] = BLACK_WHITE_GRAY_SCHEME
 pio.templates.default = "black_white_gray_template"
-
 
 def login():
     st.title("Login")
@@ -25,7 +39,6 @@ def login():
             
             if "200 Ok" in response.text:
                 st.session_state.cookie_jar = response.cookies
-                
                 st.session_state.logged_in = True
                 st.session_state.password = password
                 st.rerun()
@@ -47,11 +60,13 @@ def logout():
         st.rerun()
 
 def main():
-
     st.set_page_config(layout="wide", page_icon="assets/NOI_OPENDATAHUB_NEW_BK_nospace-01.svg")
 
-    # Variables
+    # Load environment variables and config file
     load_dotenv()
+    st.session_state.config = load_config()  # Store config in session state
+    
+    # Other setup as before
     username_env = os.getenv("USERNAME_RT")
     base_url = os.getenv("BASE_URL")
 

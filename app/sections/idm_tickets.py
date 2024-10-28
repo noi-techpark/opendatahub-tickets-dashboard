@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import yaml
 import datetime
 import plotly.express as px
 import plotly.graph_objects as go
@@ -11,11 +10,6 @@ DEFAULT_START_YEAR = 2019
 DATE_FORMAT = '%a %b %d %H:%M:%S %Y'
 MONTH_ORDER = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 MONTH_MAP = {i+1: month for i, month in enumerate(MONTH_ORDER)}
-
-# Load configuration from the config.yaml file
-def load_config(config_file="config.yaml"):
-    with open(config_file, 'r') as file:
-        return yaml.safe_load(file)
 
 # Fetch and process data for the selected years
 def fetch_and_process_data(selected_years, config):
@@ -153,7 +147,7 @@ def prepare_heatmap_data(data):
     return heatmap_data.sort_index().reset_index()
 
 # Load configuration
-config = load_config()
+config = st.session_state.config
 
 # Streamlit UI
 st.title("IDM Tickets Overview")

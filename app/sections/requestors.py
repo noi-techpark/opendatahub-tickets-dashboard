@@ -1,17 +1,11 @@
 import streamlit as st
 import pandas as pd
-import yaml
 import datetime
 import plotly.express as px
 from utils import fetch_data
 
 # Constants
 DEFAULT_START_YEAR = 2019
-
-# Load configuration from the config.yaml file
-def load_config(config_file="config.yaml"):
-    with open(config_file, 'r') as file:
-        return yaml.safe_load(file)
 
 # Cache data fetch operation to avoid redundant requests
 @st.cache_data
@@ -104,7 +98,7 @@ def display_yearly_view(all_data, selected_years):
     st.markdown(config['requestors']['markdown_text']['chart03'])
 
 
-config = load_config()
+config = st.session_state.config
 
 st.title("Requestors Overview")
 

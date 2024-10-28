@@ -1,16 +1,9 @@
 import streamlit as st
 import pandas as pd
-import yaml
 import datetime
 import plotly.express as px
 import plotly.graph_objects as go
 from utils import fetch_data
-
-# Load configuration from the config.yaml file
-def load_config(config_file="config.yaml"):
-    with open(config_file, 'r') as file:
-        config = yaml.safe_load(file)
-    return config
 
 def load_data(selected_years):
     # Initialize a list to hold the monthly ticket counts for each year
@@ -115,7 +108,7 @@ def display_heatmap_table(data):
     st.plotly_chart(fig)
 
 # Load the configuration
-config = load_config()
+config = st.session_state.config
 
 st.title("Help Queue Overview")
 

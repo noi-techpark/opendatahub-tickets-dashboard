@@ -1,16 +1,10 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import yaml
 from collections import defaultdict
 import datetime
 from utils import fetch_data
 
-# Load configuration from the config.yaml file
-def load_config(config_file="config.yaml"):
-    with open(config_file, 'r') as file:
-        config = yaml.safe_load(file)
-    return config
 
 # Data processing functions
 def process_companies_data(df, company_field="CF.{Company name}"):
@@ -26,7 +20,7 @@ def prepare_top_companies(companies, top_n):
     )
 
 # Load the configuration
-config = load_config()
+config = st.session_state.config
 
 st.title("Customer Overview")
 
