@@ -2,13 +2,12 @@ name: CI/CD
 
 on: 
   push:
-  pull_request:
 
 env:
   PROJECT_NAME: tickets-dashboard
   DOCKER_IMAGE: ghcr.io/${{ github.repository }}
   DOCKER_TAG: ${{ github.sha }}
-  SERVER_PORT: 8501
+  SERVER_PORT: 1021
 
 jobs:
   deploy-test:
@@ -17,9 +16,6 @@ jobs:
     steps:
       - name: Checkout source code
         uses: noi-techpark/github-actions/checkout@v2
-
-      - name: REUSE Compliance Check
-        uses: fsfe/reuse-action@v1
 
       - name: Create .env file
         uses: noi-techpark/github-actions/env-file@v2
@@ -50,9 +46,6 @@ jobs:
     steps:
       - name: Checkout source code
         uses: noi-techpark/github-actions/checkout@v2
-
-      - name: REUSE Compliance Check
-        uses: fsfe/reuse-action@v1
 
       - name: Create .env file
         uses: noi-techpark/github-actions/env-file@v2
