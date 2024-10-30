@@ -24,6 +24,8 @@ jobs:
           X_DOCKER_IMAGE: ${{ env.DOCKER_IMAGE }}
           X_DOCKER_TAG: ${{ env.DOCKER_TAG }}
           X_SERVER_PORT: ${{ env.SERVER_PORT }}
+          X_USERNAME_RT: dashboard
+          X_BASE_URL: https://issues.opendatahub.com/REST/1.0/
 
       - name: Build and push
         uses: noi-techpark/github-actions/docker-build-and-push@v2
