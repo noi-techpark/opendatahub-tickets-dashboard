@@ -5,4 +5,4 @@ Source: https://github.com/noi-techpark/opendatahub-tickets-dashboard
 
 Files: .github/* infrastructure/* app/* .gitignore docker-compose.yml LICENSE README.md requirements.txt
 Copyright: (c) NOI Techpark <digital@noi.bz.it>
-License: CC0-1.0
+License: AGPL-3.0-or-later
