@@ -3,6 +3,6 @@ Upstream-Name: opendatahub-tickets-dashboard
 Upstream-Contact: NOI Techpark <digital@noi.bz.it>
 Source: https://github.com/noi-techpark/opendatahub-tickets-dashboard
 
-Files: .github/* infrastructure/* .gitignore app/assets/* app/config.yaml.enc
+Files: .github/* infrastructure/* .gitignore app/assets/* app/config.yaml.enc *.env.example
 Copyright: (c) NOI Techpark <digital@noi.bz.it>
 License: CC0-1.0
