@@ -6,3 +6,5 @@ services:
       - .env
     ports:
       - "${SERVER_PORT}:8501"
+    volumes:
+      - config.yaml:/app/config.yaml

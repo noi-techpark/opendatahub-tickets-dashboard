@@ -30,6 +30,9 @@ jobs:
         with:
           docker-username: ${{ github.actor }}
           docker-password: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Decrypt secret config file
+        run: base64 -d ./app/config.yaml.enc | gpg --batch -d -o- --passphrase ${{secrets.VAULT_PASSPHRASE}} - > config.yaml
 
       - name: Deploy application
         uses: noi-techpark/github-actions/docker-deploy@v2
