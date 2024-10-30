@@ -3,6 +3,6 @@ services:
     image: ${DOCKER_IMAGE}:${DOCKER_TAG}
     restart: unless-stopped
     env_file: 
-      - app/.env
+      - .env
     ports:
       - "${SERVER_PORT}:8501"
