@@ -7,4 +7,4 @@ services:
     ports:
       - "${SERVER_PORT}:8501"
     volumes:
-      - ./config.yaml:/app/config.yaml
+      - ./config.yaml:/app/app/config.yaml
