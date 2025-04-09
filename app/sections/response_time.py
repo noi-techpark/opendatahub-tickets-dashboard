@@ -116,7 +116,7 @@ st.title("Response Times")
 # Text of this Page
 st.markdown(config['response_time']['markdown_text']['additional_info'])
 
-# Select years and query toggle
+# Select years
 current_year = datetime.datetime.now().year
 selected_years = st.multiselect(
     "Select Years", 
@@ -125,11 +125,8 @@ selected_years = st.multiselect(
 )
 selected_years.sort()
 
-use_query_2 = st.checkbox(config['response_time']['markdown_text']['text_button'])
-
-# Determine query parameters
-query_params_key = 'query_parameters_2' if use_query_2 else 'query_parameters_1'
-query_params = config['response_time'][query_params_key]
+# Always use query_parameters_1
+query_params = config['response_time']['query_parameters_1']
 
 # Fetch and display data
 all_data = {}
@@ -149,4 +146,3 @@ for idx, year in enumerate(selected_years):
 if all_data:
     stacked_data = prepare_stacked_data(all_data)
     st.plotly_chart(create_stacked_bar_chart(stacked_data))
-
