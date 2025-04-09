@@ -125,10 +125,31 @@ use_alternate_query = st.checkbox(config['requestors']['markdown_text']['text_bu
 
 # Determine query parameters based on the checkbox
 query_params_key = 'query_parameters_2' if use_alternate_query else 'query_parameters_1'
-query_params = config['requestors'][query_params_key]
+# Make a copy to avoid modifying the cached config
+query_params = config['requestors'][query_params_key].copy()
 
 # Fetch data for each selected year
-all_data = [fetch_and_process_data(year, query_params) for year in selected_years]
+# Temporary list to store fetched data before processing
+fetched_data_list = [fetch_and_process_data(year, query_params) for year in selected_years]
+
+processed_data_list = []
+for df in fetched_data_list:
+    if not df.empty and 'Queue' in df.columns:
+        # Create the mask and add fields for rows where Queue is 'IDM'
+        idm_mask = df['Queue'].astype(str).fillna('') == 'IDM'
+        if 'CF.{Type of requestor}' in df.columns:
+             df.loc[idm_mask, 'CF.{Type of requestor}'] = 'IDM'
+        if 'CF.{Requestor use case}' in df.columns:
+             df.loc[idm_mask, 'CF.{Requestor use case}'] = 'Data consumer'
+        if 'CF.{Company type}' in df.columns:
+             df.loc[idm_mask, 'CF.{Company type}'] = 'Publicly held'
+
+    processed_data_list.append(df)
+
+# Use the processed data list from now on
+all_data = processed_data_list
+
+
 
 # Toggle to switch between "Combined" and "Yearly" views
 view_switch = st.radio("Select View:", ["Combined View", "Yearly View"])
