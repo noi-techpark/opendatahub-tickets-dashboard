@@ -23,6 +23,34 @@ def prepare_top_companies(companies, top_n):
         columns=["Company", "Tickets"]
     )
 
+# Helper function to generate Markdown report per year with all ticket IDs by company
+def generate_markdown_report(dfs_by_year, company_field="CF.{Company name}"):
+    lines = []
+    for year in sorted(dfs_by_year.keys()):
+        df = dfs_by_year[year]
+        lines.append(f"## {year}\n")
+        if company_field not in df.columns:
+            lines.append("Company field not found\n")
+        else:
+            # Group by company name
+            groups = df.groupby(company_field)
+            for company, group in groups:
+                lines.append(f"### {company}")
+                # Check for ticket id column in a case-insensitive way
+                lower_cols = [col.lower() for col in df.columns]
+                if "id" in lower_cols:
+                    id_col = [col for col in df.columns if col.lower() == "id"][0]
+                    ticket_ids = group[id_col].tolist()
+                    if ticket_ids:
+                        for tid in ticket_ids:
+                            lines.append(f"- {tid}")
+                    else:
+                        lines.append("- No tickets")
+                else:
+                    lines.append("- Ticket ID column not found")
+                lines.append("")  # blank line for spacing
+    return "\n".join(lines)
+
 # Load the configuration
 config = st.session_state.config
 
@@ -41,9 +69,11 @@ selected_years.sort()
 
 # Fetch and process data for each selected year
 all_companies = {}
+dfs_by_year = {}
 max_companies = 1
 for year in selected_years:
     df = fetch_data(year, config['customers_overview']['query_parameters']['query'], config['customers_overview']['query_parameters']['fields'])
+    dfs_by_year[year] = df.copy()  # store full dataframe for the markdown download
     companies = process_companies_data(df)
     all_companies[year] = companies
     max_companies = max(max_companies, len(companies))
@@ -76,3 +106,12 @@ for idx, year in enumerate(selected_years):
         st.subheader("All Companies")
         all_companies_df = pd.DataFrame(list(companies.items()), columns=["Company", "Tickets"]).sort_values(by="Company")
         st.dataframe(all_companies_df, hide_index=True)
+
+# Generate markdown content and provide download button
+md_content = generate_markdown_report(dfs_by_year)
+st.download_button(
+    label="Download Markdown Report with Ticket IDs",
+    data=md_content,
+    file_name="ticket_ids_report.md",
+    mime="text/markdown"
+)
