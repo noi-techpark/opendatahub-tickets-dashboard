@@ -18,7 +18,10 @@ HOURS_IN_A_WEEK = 7 * HOURS_IN_A_DAY
 
 # Helper function to compute business hours (excluding weekends and Italian public holidays)
 def compute_business_hours(start, end):
-    if pd.isna(start) or pd.isna(end) or start >= end:
+    # If either timestamp is missing, return NaN so that later we mark it as "Not set"
+    if pd.isna(start) or pd.isna(end):
+        return float('nan')
+    if start >= end:
         return 0
     # Create a set of Italian holidays for all years in the interval
     years = list(range(start.year, end.year + 1))
