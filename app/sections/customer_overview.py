@@ -71,9 +71,8 @@ for idx, year in enumerate(selected_years):
         st.plotly_chart(fig)
 
         st.subheader("Top Companies")
-        st.table(df_top)
+        st.dataframe(df_top, hide_index=True)
 
         st.subheader("All Companies")
-        st.table(pd.DataFrame(list(companies.items()), columns=["Company", "Tickets"]).sort_values(by="Company"))
-
-
+        all_companies_df = pd.DataFrame(list(companies.items()), columns=["Company", "Tickets"]).sort_values(by="Company")
+        st.dataframe(all_companies_df, hide_index=True)
