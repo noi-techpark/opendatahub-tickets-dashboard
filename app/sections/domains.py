@@ -98,7 +98,19 @@ if selected_years:
     all_data = fetch_data_for_years(selected_years, query_params)
 
     if not all_data.empty:
-        all_data['Standardized_Domain'] = all_data['CF.{OpenDataHub Domain}'].apply(standardize_domain)
+        # Check if 'Queue' column exists, needed for the IDM->Tourism logic
+        if 'Queue' not in all_data.columns:
+            st.warning("The 'Queue' column is missing in the fetched data. Cannot apply IDM -> Tourism logic.")
+            # Fallback: Apply standard domain logic without Queue check
+            all_data['Standardized_Domain'] = all_data['CF.{OpenDataHub Domain}'].apply(standardize_domain)
+        else:
+            # Apply initial standardization based on the domain field
+            all_data['Standardized_Domain'] = all_data['CF.{OpenDataHub Domain}'].apply(standardize_domain)
+            # Override domain to 'Tourism' where Queue is 'IDM'
+            # Ensure Queue column is treated as string and handle potential NaNs before comparison
+            idm_mask = all_data['Queue'].astype(str).fillna('') == 'IDM'
+            all_data.loc[idm_mask, 'Standardized_Domain'] = 'Tourism'
+
 
         # Display total domain chart
         st.plotly_chart(create_total_domain_chart(all_data))
@@ -107,15 +119,33 @@ if selected_years:
         cols = st.columns(len(selected_years))
 
         # Calculate the global max percentage for uniform y-axis range
-        max_percentage = max(
-            calculate_domain_percentage(all_data, year)['Percentage'].max() for year in selected_years
-        )
+        # Handle potential case where a year might have no data after filtering/processing
+        max_percentage = 0
+        valid_years_for_max = []
+        for year in selected_years:
+             if not all_data[all_data['Year'] == year].empty:
+                 valid_years_for_max.append(year)
+
+        if valid_years_for_max:
+             max_percentage = max(
+                 calculate_domain_percentage(all_data, year)['Percentage'].max() for year in valid_years_for_max
+             )
+        else:
+             max_percentage = 100 # Default if no data exists for any selected year
 
         # Display yearly charts
         for idx, year in enumerate(selected_years):
-            domain_counts_year = calculate_domain_percentage(all_data, year)
-            fig_year = create_yearly_percentage_chart(domain_counts_year, year, max_percentage)
-            cols[idx].plotly_chart(fig_year)
+            year_data = all_data[all_data['Year'] == year]
+            if not year_data.empty:
+                domain_counts_year = calculate_domain_percentage(year_data, year) # Pass filtered data
+                if not domain_counts_year.empty:
+                    fig_year = create_yearly_percentage_chart(domain_counts_year, year, max_percentage)
+                    cols[idx].plotly_chart(fig_year)
+                else:
+                    cols[idx].write(f"No domain data to display for {year}.")
+            else:
+                 cols[idx].write(f"No data available for {year}.")
+
 
     else:
         st.write("No data available for the selected years.")
