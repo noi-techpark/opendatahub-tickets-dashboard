@@ -7,6 +7,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import datetime
+import holidays
 from utils import fetch_data
 
 # Constants for response time categories
@@ -15,14 +16,54 @@ DATE_FORMAT = '%a %b %d %H:%M:%S %Y'
 HOURS_IN_A_DAY = 24
 HOURS_IN_A_WEEK = 7 * HOURS_IN_A_DAY
 
+# Helper function to compute business hours (excluding weekends and Italian public holidays)
+def compute_business_hours(start, end):
+    if pd.isna(start) or pd.isna(end) or start >= end:
+        return 0
+    # Create a set of Italian holidays for all years in the interval
+    years = list(range(start.year, end.year + 1))
+    italian_holidays = holidays.Italy(years=years)
+    
+    total_minutes = 0
+    # If both timestamps are on the same day
+    if start.date() == end.date():
+        if start.weekday() < 5 and start.date() not in italian_holidays:
+            diff_minutes = (end - start).total_seconds() / 60
+            total_minutes = diff_minutes
+        return total_minutes / 60.0
+
+    # Calculate minutes for the first day (from start time to midnight)
+    first_day = start.date()
+    if start.weekday() < 5 and first_day not in italian_holidays:
+        end_of_day = datetime.datetime.combine(first_day + datetime.timedelta(days=1), datetime.time.min)
+        diff_minutes = (end_of_day - start).total_seconds() / 60
+        total_minutes += diff_minutes
+
+    # Calculate minutes for the last day (from midnight to end time)
+    last_day = end.date()
+    if end.weekday() < 5 and last_day not in italian_holidays:
+        start_of_day = datetime.datetime.combine(last_day, datetime.time.min)
+        diff_minutes = (end - start_of_day).total_seconds() / 60
+        total_minutes += diff_minutes
+
+    # Sum full days in between
+    day = start.date() + datetime.timedelta(days=1)
+    while day < end.date():
+        # If day is a weekday and not a holiday, add full day minutes
+        if day.weekday() < 5 and day not in italian_holidays:
+            total_minutes += 24 * 60
+        day += datetime.timedelta(days=1)
+    
+    return total_minutes / 60.0
+
 # Data processing function to calculate response time categories
 def categorize_response_times(df, started_field="Started", created_field="Created"):
     # Parse datetime fields
     df[started_field] = pd.to_datetime(df[started_field], format=DATE_FORMAT, errors='coerce')
     df[created_field] = pd.to_datetime(df[created_field], format=DATE_FORMAT, errors='coerce')
 
-    # Calculate response times in hours
-    df['ResponseTime'] = (df[started_field] - df[created_field]).dt.total_seconds() / 3600.0
+    # Calculate response times in business hours (excluding weekends and Italian holidays)
+    df['ResponseTime'] = df.apply(lambda row: compute_business_hours(row[created_field], row[started_field]), axis=1)
 
     # Categorize based on response time
     df['ResponseCategory'] = df['ResponseTime'].apply(lambda hours: categorize_time(hours))
@@ -99,14 +140,13 @@ def prepare_stacked_data(all_data):
         {
             "Year": year,
             **{
-                category: (response_counts.get(category, 0) / total_responses) * 100
-                for category, total_responses in zip(RESPONSE_CATEGORIES, [response_counts.sum()] * len(RESPONSE_CATEGORIES))
+                category: (response_counts.get(category, 0) / response_counts.sum()) * 100
+                for category in RESPONSE_CATEGORIES
             }
         }
         for year, response_counts in all_data.items()
     ]
     return stacked_data
-
 
 # Load configuration
 config = st.session_state.config
