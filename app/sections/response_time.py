@@ -148,6 +148,34 @@ def prepare_stacked_data(all_data):
     ]
     return stacked_data
 
+# Helper function to generate Markdown report per year, per category listing Ticket IDs
+def generate_markdown_report(dfs_by_year):
+    lines = []
+    for year in sorted(dfs_by_year.keys()):
+        df = dfs_by_year[year]
+        lines.append(f"## {year}\n")
+        # Make a lowercase list of column names to allow case-insensitive search
+        lower_cols = [col.lower() for col in df.columns]
+        if "id" in lower_cols:
+            # Get the original column name (in case the case is different)
+            id_col = [col for col in df.columns if col.lower() == "id"][0]
+        else:
+            id_col = None
+
+        for category in RESPONSE_CATEGORIES:
+            lines.append(f"### {category}")
+            if id_col is not None:
+                ticket_ids = df.loc[df['ResponseCategory'] == category, id_col].tolist()
+                if ticket_ids:
+                    for tid in ticket_ids:
+                        lines.append(f"- {tid}")
+                else:
+                    lines.append("- No tickets")
+            else:
+                lines.append("- Ticket ID column not found")
+            lines.append("")  # Blank line for spacing
+    return "\n".join(lines)
+
 # Load configuration
 config = st.session_state.config
 
@@ -168,12 +196,14 @@ selected_years.sort()
 # Always use query_parameters_1
 query_params = config['response_time']['query_parameters_1']
 
-# Fetch and display data
+# Dictionaries to store data for plots and markdown report
 all_data = {}
-data_columns = st.columns(len(selected_years))
+dfs_by_year = {}
 
+data_columns = st.columns(len(selected_years))
 for idx, year in enumerate(selected_years):
     df = fetch_and_process_data(year, query_params)
+    dfs_by_year[year] = df  # Store full dataframe for the markdown download
     with data_columns[idx]:
         st.subheader(f"{year}")
         if df.empty:
@@ -186,3 +216,13 @@ for idx, year in enumerate(selected_years):
 if all_data:
     stacked_data = prepare_stacked_data(all_data)
     st.plotly_chart(create_stacked_bar_chart(stacked_data))
+
+# Generate markdown content and provide download button
+if dfs_by_year:
+    md_content = generate_markdown_report(dfs_by_year)
+    st.download_button(
+        label="Download Markdown Report",
+        data=md_content,
+        file_name="ticket_data.md",
+        mime="text/markdown"
+    )
