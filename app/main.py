@@ -73,9 +73,13 @@ def main():
     # Other setup as before
     username_env = os.getenv("USERNAME_RT")
     base_url = os.getenv("BASE_URL")
+    download_enabled = os.getenv("DOWNLOAD_ENABLED", "false").lower() == "true"
+    tickets_base_url = os.getenv("TICKETS_DETAILS_BASE_URL", "")
 
     st.session_state.username = username_env if username_env else ""
     st.session_state.base_url = base_url if base_url else ""
+    st.session_state.download_enabled = download_enabled
+    st.session_state.tickets_base_url = tickets_base_url
     
     if "logged_in" not in st.session_state:
         st.session_state.logged_in = False
@@ -87,13 +91,12 @@ def main():
     login_page = st.Page(login, title="Log in", icon="🔒")
     logout_page = st.Page(logout, title="Log out", icon="🔓")
 
-    queue = st.Page("sections/help_overview.py", title="Help Queue Overview", icon="", default=True)
-    customer = st.Page("sections/customer_overview.py", title="Customer Overview", icon="")
-    time = st.Page("sections/response_time.py", title="Response Times", icon="")
-    domain = st.Page("sections/domains.py", title="Domains", icon="")
-    idm = st.Page("sections/idm_tickets.py", title="IDM Tickets", icon="")
-    requestors = st.Page("sections/requestors.py", title="Requestors", icon="")
-
+    queue = st.Page("sections/help_overview.py", title="Help Queue Overview", default=True)
+    customer = st.Page("sections/customer_overview.py", title="Customer Overview")
+    time = st.Page("sections/response_time.py", title="Response Times")
+    domain = st.Page("sections/domains.py", title="Domains")
+    idm = st.Page("sections/idm_tickets.py", title="IDM Tickets")
+    requestors = st.Page("sections/requestors.py", title="Requestors")
     if st.session_state.logged_in:
         pg = st.navigation(
             {

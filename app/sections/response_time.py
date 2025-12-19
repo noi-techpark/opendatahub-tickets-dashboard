@@ -8,7 +8,7 @@ import pandas as pd
 import plotly.express as px
 import datetime
 import holidays
-from utils import fetch_data
+from utils import fetch_data, render_time_filter, filter_df_by_quarter, get_quarter_label, is_download_enabled, format_ticket_link_markdown, render_download_button
 
 # Constants for response time categories
 RESPONSE_CATEGORIES = ["Within first hour", "Within first day", "Within first 2 days", "Within first week", "More than a week", "Not set"]
@@ -98,7 +98,7 @@ def fetch_and_process_data(year, query_params):
     return df
 
 # Helper function for creating a pie chart
-def create_pie_chart(df, year):
+def create_pie_chart(df, period_label):
     response_counts = df['ResponseCategory'].value_counts().reindex(df['ResponseCategory'].cat.categories, fill_value=0)
     fig = px.pie(
         names=response_counts.index, 
@@ -110,9 +110,9 @@ def create_pie_chart(df, year):
     return fig
 
 # Helper function for creating a stacked bar chart
-def create_stacked_bar_chart(stacked_data):
+def create_stacked_bar_chart(stacked_data, period_col='Period'):
     stacked_df = pd.DataFrame(stacked_data)
-    melted_df = stacked_df.melt(id_vars='Year', var_name='Response Category', value_name='Percentage')
+    melted_df = stacked_df.melt(id_vars=period_col, var_name='Response Category', value_name='Percentage')
 
     # Filter categories for the bar chart
     filtered_df = melted_df[melted_df['Response Category'].isin(["Within first hour", "Within first day", "Within first 2 days"])]
@@ -120,43 +120,54 @@ def create_stacked_bar_chart(stacked_data):
     # Create stacked bar chart
     fig = px.bar(
         filtered_df, 
-        x='Year', 
+        x=period_col, 
         y='Percentage', 
         color='Response Category', 
         title="Stacked Bar Chart of Response Times (%)",
-        labels={'Percentage': 'Percentage of Responses (%)', 'Year': 'Year'},
+        labels={'Percentage': 'Percentage of Responses (%)', period_col: period_col},
         barmode='stack'
     )
     
-    fig.update_layout(
-        xaxis=dict(
-            tickmode='array',
-            tickvals=stacked_df['Year'],
-            ticktext=[str(int(year)) for year in stacked_df['Year']]
+    if period_col == 'Year':
+        fig.update_layout(
+            xaxis=dict(
+                tickmode='array',
+                tickvals=stacked_df[period_col],
+                ticktext=[str(int(year)) for year in stacked_df[period_col]]
+            )
         )
-    )
     return fig
 
 # Prepare data for stacked bar chart
-def prepare_stacked_data(all_data):
+def prepare_stacked_data(all_data, period_col='Period'):
     stacked_data = [
         {
-            "Year": year,
+            period_col: period,
             **{
                 category: (response_counts.get(category, 0) / response_counts.sum()) * 100
                 for category in RESPONSE_CATEGORIES
             }
         }
-        for year, response_counts in all_data.items()
+        for period, response_counts in all_data.items()
     ]
     return stacked_data
 
-# Helper function to generate Markdown report per year, per category listing Ticket IDs
-def generate_markdown_report(dfs_by_year):
+# Helper function to generate Markdown report per period, per category listing Ticket IDs
+def generate_markdown_report(dfs_by_period):
     lines = []
-    for year in sorted(dfs_by_year.keys()):
-        df = dfs_by_year[year]
-        lines.append(f"## {year}\n")
+    lines.append("# Response Times Report\n")
+    lines.append(f"Generated: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}\n")
+    
+    for period in sorted(dfs_by_period.keys(), key=lambda x: str(x)):
+        df = dfs_by_period[period]
+        lines.append(f"## {period}\n")
+        
+        if df.empty:
+            lines.append("No data for this period.\n")
+            continue
+        
+        lines.append(f"**Total Tickets:** {len(df)}\n")
+        
         # Make a lowercase list of column names to allow case-insensitive search
         lower_cols = [col.lower() for col in df.columns]
         if "id" in lower_cols:
@@ -166,14 +177,17 @@ def generate_markdown_report(dfs_by_year):
             id_col = None
 
         for category in RESPONSE_CATEGORIES:
-            lines.append(f"### {category}")
-            if id_col is not None:
-                ticket_ids = df.loc[df['ResponseCategory'] == category, id_col].tolist()
+            category_df = df[df['ResponseCategory'] == category] if 'ResponseCategory' in df.columns else pd.DataFrame()
+            lines.append(f"### {category} ({len(category_df)} tickets)")
+            if id_col is not None and not category_df.empty:
+                ticket_ids = category_df[id_col].tolist()
                 if ticket_ids:
                     for tid in ticket_ids:
-                        lines.append(f"- {tid}")
+                        lines.append(f"- {format_ticket_link_markdown(tid)}")
                 else:
                     lines.append("- No tickets")
+            elif category_df.empty:
+                lines.append("- No tickets")
             else:
                 lines.append("- Ticket ID column not found")
             lines.append("")  # Blank line for spacing
@@ -187,45 +201,77 @@ st.title("Response Times")
 # Text of this Page
 st.markdown(config['response_time']['markdown_text']['additional_info'])
 
-# Select years
-current_year = datetime.datetime.now().year
-selected_years = st.multiselect(
-    "Select Years", 
-    options=list(range(2019, current_year + 1)), 
-    default=[current_year-2, current_year-1, current_year]
-)
-selected_years.sort()
+# Use the unified time filter component
+filter_mode, selected_periods = render_time_filter()
 
 # Always use query_parameters_1
 query_params = config['response_time']['query_parameters_1']
 
 # Dictionaries to store data for plots and markdown report
 all_data = {}
-dfs_by_year = {}
+dfs_by_period = {}
 
-data_columns = st.columns(len(selected_years))
-for idx, year in enumerate(selected_years):
-    df = fetch_and_process_data(year, query_params)
-    dfs_by_year[year] = df  # Store full dataframe for the markdown download
-    with data_columns[idx]:
-        st.subheader(f"{year}")
-        if df.empty:
-            st.write("No data available for this year.")
+if filter_mode == 'years' and selected_periods:
+    data_columns = st.columns(len(selected_periods))
+    for idx, year in enumerate(selected_periods):
+        df = fetch_and_process_data(year, query_params)
+        dfs_by_period[year] = df
+        with data_columns[idx]:
+            st.subheader(f"{year}")
+            if df.empty:
+                st.write("No data available for this year.")
+            else:
+                all_data[year] = df['ResponseCategory'].value_counts().reindex(RESPONSE_CATEGORIES, fill_value=0)
+                st.plotly_chart(create_pie_chart(df, year))
+
+    # Prepare and display stacked bar chart
+    if all_data:
+        stacked_data = prepare_stacked_data(all_data, period_col='Year')
+        st.plotly_chart(create_stacked_bar_chart(stacked_data, period_col='Year'))
+
+elif filter_mode == 'quarters' and selected_periods:
+    # Group by year to minimize fetches
+    years_needed = set(year for year, _ in selected_periods)
+    year_data_cache = {}
+    
+    for year in years_needed:
+        df = fetch_and_process_data(year, query_params)
+        year_data_cache[year] = df
+    
+    period_labels = [get_quarter_label(year, quarter) for year, quarter in selected_periods]
+    data_columns = st.columns(len(period_labels))
+    
+    for idx, (year, quarter) in enumerate(selected_periods):
+        label = get_quarter_label(year, quarter)
+        df = year_data_cache.get(year, pd.DataFrame())
+        
+        if not df.empty:
+            df_quarter = filter_df_by_quarter(df, year, quarter, date_column='Created')
+            # Re-apply categorization for the filtered data
+            if not df_quarter.empty and 'ResponseCategory' not in df_quarter.columns:
+                df_quarter = categorize_response_times(df_quarter)
+            dfs_by_period[label] = df_quarter
         else:
-            all_data[year] = df['ResponseCategory'].value_counts().reindex(RESPONSE_CATEGORIES, fill_value=0)
-            st.plotly_chart(create_pie_chart(df, year))
+            df_quarter = pd.DataFrame()
+            dfs_by_period[label] = df_quarter
+        
+        with data_columns[idx]:
+            st.subheader(f"{label}")
+            if df_quarter.empty:
+                st.write("No data available for this quarter.")
+            else:
+                all_data[label] = df_quarter['ResponseCategory'].value_counts().reindex(RESPONSE_CATEGORIES, fill_value=0)
+                st.plotly_chart(create_pie_chart(df_quarter, label))
 
-# Prepare and display stacked bar chart
-if all_data:
-    stacked_data = prepare_stacked_data(all_data)
-    st.plotly_chart(create_stacked_bar_chart(stacked_data))
+    # Prepare and display stacked bar chart
+    if all_data:
+        stacked_data = prepare_stacked_data(all_data, period_col='Period')
+        st.plotly_chart(create_stacked_bar_chart(stacked_data, period_col='Period'))
+
+else:
+    st.warning("Please select at least one year or quarter.")
 
 # Generate markdown content and provide download button
-if dfs_by_year:
-    md_content = generate_markdown_report(dfs_by_year)
-    st.download_button(
-        label="Download Markdown Report",
-        data=md_content,
-        file_name="ticket_data.md",
-        mime="text/markdown"
-    )
+if dfs_by_period:
+    md_content = generate_markdown_report(dfs_by_period)
+    render_download_button(md_content, "response_times_report.md", "Download Response Times Report")
