@@ -23,6 +23,46 @@ def prepare_top_companies(companies, top_n):
         columns=["Company", "Tickets"]
     )
 
+START_YEAR = 2018
+
+def fetch_all_previous_companies(period_struct, filter_mode, config):
+    query = config['customers_overview']['query_parameters']['query']
+    fields = config['customers_overview']['query_parameters']['fields']
+    previous_companies = set()
+    
+    if filter_mode == 'years':
+        current_year = period_struct
+        # Fetch for all previous years
+        for year in range(START_YEAR, current_year):
+            df = fetch_data(year, query, fields)
+            if not df.empty:
+                previous_companies.update(process_companies_data(df).keys())
+                
+    elif filter_mode == 'quarters':
+        current_year, current_quarter = period_struct
+        
+        # 1. Fetch for all previous years
+        for year in range(START_YEAR, current_year):
+            df = fetch_data(year, query, fields)
+            if not df.empty:
+                previous_companies.update(process_companies_data(df).keys())
+        
+        # 2. Fetch for current year, previous quarters
+        if current_quarter > 1:
+            df = fetch_data(current_year, query, fields)
+            if not df.empty and 'Created' in df.columns:
+                if not pd.api.types.is_datetime64_any_dtype(df['Created']):
+                     df['Created'] = pd.to_datetime(df['Created'], format='%a %b %d %H:%M:%S %Y', errors='coerce')
+                
+                # Filter for months before the current quarter
+                # Q1: 1-3, Q2: 4-6, Q3: 7-9, Q4: 10-12
+                # Start month of current quarter is (current_quarter - 1) * 3 + 1
+                start_month_current = (current_quarter - 1) * 3 + 1
+                df_prev = df[df['Created'].dt.month < start_month_current]
+                previous_companies.update(process_companies_data(df_prev).keys())
+
+    return previous_companies
+
 # Helper function to generate Markdown report per year with all ticket IDs by company
 def generate_markdown_report(dfs_by_period, company_field="CF.{Company name}"):
     lines = []
@@ -131,8 +171,15 @@ for idx, period in enumerate(period_labels):
         total_tickets = sum(companies.values())
         total_companies = len(companies)
 
-        st.write(f"Tickets: **{total_tickets}**")
-        st.write(f"Companies: **{total_companies}**")
+        # st.write(f"Tickets: **{total_tickets}**")
+        st.write(f"Customer: **{total_companies}**")
+
+        # Calculate new companies since ALL previous timeframes
+        current_struct = selected_periods[idx]
+        prev_companies_set = fetch_all_previous_companies(current_struct, filter_mode, config)
+        current_companies_set = set(companies.keys())
+        new_companies = current_companies_set - prev_companies_set
+        st.write(f"New Customer: **{len(new_companies)}**")
 
         if companies:
             df_top = prepare_top_companies(companies, top_n)
